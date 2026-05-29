@@ -9,64 +9,92 @@ export default function CuentaPage() {
 
   const [userEmail, setUserEmail] = useState("");
 
- const [form, setForm] = useState({
-  first_name: "",
-  last_name: "",
-  phone: "",
-  user_type: "particular",
-  business_name: "",
-});
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    user_type: "particular",
+    business_name: "",
+  });
+
   const loadProfile = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-    if (!sessionData.session?.user) {
-      window.location.href = "/login";
-      return;
+      if (sessionError) {
+        alert(sessionError.message);
+        return;
+      }
+
+      if (!sessionData.session?.user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const user = sessionData.session.user;
+      setUserEmail(user.email || "");
+
+      const metadata = user.user_metadata || {};
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        alert(profileError.message);
+        return;
+      }
+
+      if (!profile) {
+        const newProfile = {
+          id: user.id,
+          first_name: metadata.first_name || metadata.given_name || "",
+          last_name: metadata.last_name || metadata.family_name || "",
+          full_name:
+            metadata.full_name ||
+            metadata.name ||
+            `${metadata.first_name || ""} ${metadata.last_name || ""}`.trim(),
+          phone: metadata.phone || "",
+          user_type: metadata.user_type || "particular",
+          business_name: metadata.business_name || null,
+          avatar_url: metadata.avatar_url || "",
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .upsert(newProfile);
+
+        if (insertError) {
+          alert(insertError.message);
+          return;
+        }
+
+        setForm({
+          first_name: newProfile.first_name,
+          last_name: newProfile.last_name,
+          phone: newProfile.phone,
+          user_type: newProfile.user_type,
+          business_name: newProfile.business_name || "",
+        });
+      } else {
+        setForm({
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          phone: profile.phone || "",
+          user_type: profile.user_type || "particular",
+          business_name: profile.business_name || "",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error cargando la cuenta.");
+    } finally {
+      setLoading(false);
     }
-
-    const user = sessionData.session.user;
-    setUserEmail(user.email || "");
-
-    const metadata = user.user_metadata || {};
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile) {
-      await supabase.from("profiles").upsert({
-        id: user.id,
-        first_name: metadata.first_name || metadata.given_name || "",
-        last_name: metadata.last_name || metadata.family_name || "",
-        full_name:
-          metadata.full_name ||
-          metadata.name ||
-          `${metadata.first_name || ""} ${metadata.last_name || ""}`.trim(),
-        phone: metadata.phone || "",
-        user_type: metadata.user_type || "particular",
-        avatar_url: metadata.avatar_url || "",
-      });
-
-      setForm({
-  first_name: metadata.first_name || metadata.given_name || "",
-  last_name: metadata.last_name || metadata.family_name || "",
-  phone: metadata.phone || "",
-  user_type: metadata.user_type || "particular",
-  business_name: metadata.business_name || "",
-});
-    } else {
-      setForm({
-  first_name: profile.first_name || "",
-  last_name: profile.last_name || "",
-  phone: profile.phone || "",
-  user_type: profile.user_type || "particular",
-  business_name: profile.business_name || "",
-});
-    }
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -83,43 +111,56 @@ export default function CuentaPage() {
       alert("El teléfono o WhatsApp es obligatorio.");
       return;
     }
-if (form.user_type === "automotora" && !form.business_name.trim()) {
-  alert("Debes ingresar el nombre de la automotora.");
-  return;
-}
+
+    if (form.user_type === "automotora" && !form.business_name.trim()) {
+      alert("Debes ingresar el nombre de la automotora.");
+      return;
+    }
+
     setSaving(true);
 
-    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-    if (!sessionData.session?.user) {
-      window.location.href = "/login";
-      return;
+      if (sessionError) {
+        alert(sessionError.message);
+        return;
+      }
+
+      if (!sessionData.session?.user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const user = sessionData.session.user;
+
+      const fullName = `${form.first_name} ${form.last_name}`.trim();
+
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        full_name: fullName,
+        phone: form.phone,
+        user_type: form.user_type,
+        business_name:
+          form.user_type === "automotora" ? form.business_name : null,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Datos de la cuenta actualizados correctamente.");
+    } catch (error) {
+      console.error(error);
+      alert("Error guardando la cuenta.");
+    } finally {
+      setSaving(false);
     }
-
-    const user = sessionData.session.user;
-
-    const fullName = `${form.first_name} ${form.last_name}`.trim();
-
-   const { error } = await supabase.from("profiles").upsert({
-  id: user.id,
-  first_name: form.first_name,
-  last_name: form.last_name,
-  full_name: fullName,
-  phone: form.phone,
-  user_type: form.user_type,
-  business_name:
-    form.user_type === "automotora" ? form.business_name : null,
-  updated_at: new Date().toISOString(),
-});
-
-    setSaving(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    alert("Datos de la cuenta actualizados correctamente.");
   };
 
   if (loading) {
@@ -149,9 +190,7 @@ if (form.user_type === "automotora" && !form.business_name.trim()) {
         <label className="mb-2 block text-sm font-medium">Nombre</label>
         <input
           value={form.first_name}
-          onChange={(e) =>
-            setForm({ ...form, first_name: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, first_name: e.target.value })}
           placeholder="Ej: Juan"
           className="mb-4 w-full rounded-lg border px-3 py-2"
         />
@@ -159,10 +198,8 @@ if (form.user_type === "automotora" && !form.business_name.trim()) {
         <label className="mb-2 block text-sm font-medium">Apellido</label>
         <input
           value={form.last_name}
-          onChange={(e) =>
-            setForm({ ...form, last_name: e.target.value })
-          }
-          placeholder="Ej: Perez"
+          onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+          placeholder="Ej: Pérez"
           className="mb-4 w-full rounded-lg border px-3 py-2"
         />
 
@@ -177,36 +214,34 @@ if (form.user_type === "automotora" && !form.business_name.trim()) {
         />
 
         <label className="mb-2 block text-sm font-medium">
-  Tipo de usuario
-</label>
-<select
-  value={form.user_type}
-  onChange={(e) =>
-    setForm({ ...form, user_type: e.target.value })
-  }
-  className="mb-4 w-full rounded-lg border px-3 py-2"
->
-  <option value="particular">Particular</option>
-  <option value="automotora">Automotora</option>
-</select>
+          Tipo de usuario
+        </label>
+        <select
+          value={form.user_type}
+          onChange={(e) => setForm({ ...form, user_type: e.target.value })}
+          className="mb-4 w-full rounded-lg border px-3 py-2"
+        >
+          <option value="particular">Particular</option>
+          <option value="automotora">Automotora</option>
+        </select>
 
-{form.user_type === "automotora" && (
-  <>
-    <label className="mb-2 block text-sm font-medium">
-      Nombre de la automotora
-    </label>
-    <input
-      value={form.business_name}
-      onChange={(e) =>
-        setForm({ ...form, business_name: e.target.value })
-      }
-      placeholder="Ej: Automotora Los Andes"
-      className="mb-6 w-full rounded-lg border px-3 py-2"
-    />
-  </>
-)}
+        {form.user_type === "automotora" && (
+          <>
+            <label className="mb-2 block text-sm font-medium">
+              Nombre de la automotora
+            </label>
+            <input
+              value={form.business_name}
+              onChange={(e) =>
+                setForm({ ...form, business_name: e.target.value })
+              }
+              placeholder="Ej: Automotora Los Andes"
+              className="mb-6 w-full rounded-lg border px-3 py-2"
+            />
+          </>
+        )}
 
-{form.user_type !== "automotora" && <div className="mb-6" />}
+        {form.user_type !== "automotora" && <div className="mb-6" />}
 
         <button
           onClick={updateProfile}

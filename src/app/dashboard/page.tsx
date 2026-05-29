@@ -21,29 +21,40 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const loadMyCars = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-    if (!sessionData.session?.user) {
-      window.location.href = "/login";
-      return;
-    }
+      if (sessionError) {
+        alert(sessionError.message);
+        return;
+      }
 
-    const user = sessionData.session.user;
+      if (!sessionData.session?.user) {
+        window.location.href = "/login";
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from("cars")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      const user = sessionData.session.user;
 
-    if (error) {
-      alert(error.message);
+      const { data, error } = await supabase
+        .from("cars")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      setCars((data || []) as Car[]);
+    } catch (error) {
+      console.error(error);
+      alert("Error cargando tus publicaciones.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setCars((data || []) as Car[]);
-    setLoading(false);
   };
 
   const deleteCar = async (id: string) => {
@@ -60,7 +71,7 @@ export default function DashboardPage() {
       return;
     }
 
-    loadMyCars();
+    await loadMyCars();
   };
 
   useEffect(() => {
@@ -149,6 +160,7 @@ export default function DashboardPage() {
                 </a>
 
                 <button
+                  type="button"
                   onClick={() => deleteCar(car.id)}
                   className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white"
                 >
