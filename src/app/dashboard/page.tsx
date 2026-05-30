@@ -26,15 +26,20 @@ export default function DashboardPage() {
       setLoading(true);
       setErrorMessage("");
 
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-      if (userError || !userData.user) {
+      if (sessionError) {
+        setErrorMessage(sessionError.message);
+        return;
+      }
+
+      if (!sessionData.session?.user) {
         window.location.href = "/login";
         return;
       }
 
-      const user = userData.user;
+      const user = sessionData.session.user;
 
       const { data, error } = await supabase
         .from("cars")
@@ -49,7 +54,7 @@ export default function DashboardPage() {
 
       setCars((data || []) as Car[]);
     } catch (error) {
-      console.error(error);
+      console.error("Error cargando publicaciones:", error);
       setErrorMessage("Error cargando tus publicaciones.");
     } finally {
       setLoading(false);
