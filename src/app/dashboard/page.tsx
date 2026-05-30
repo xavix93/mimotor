@@ -19,14 +19,18 @@ type Car = {
 export default function DashboardPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const loadMyCars = async () => {
     try {
+      setLoading(true);
+      setErrorMessage("");
+
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
 
       if (sessionError) {
-        alert(sessionError.message);
+        setErrorMessage(sessionError.message);
         return;
       }
 
@@ -44,14 +48,14 @@ export default function DashboardPage() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        alert(error.message);
+        setErrorMessage(error.message);
         return;
       }
 
       setCars((data || []) as Car[]);
     } catch (error) {
       console.error(error);
-      alert("Error cargando tus publicaciones.");
+      setErrorMessage("Error cargando tus publicaciones.");
     } finally {
       setLoading(false);
     }
@@ -103,6 +107,12 @@ export default function DashboardPage() {
           Publicar auto
         </a>
       </div>
+
+      {errorMessage && (
+        <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          Error: {errorMessage}
+        </div>
+      )}
 
       {cars.length === 0 ? (
         <div className="rounded-2xl bg-white p-6 shadow">
