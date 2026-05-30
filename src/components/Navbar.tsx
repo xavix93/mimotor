@@ -58,12 +58,26 @@ export default function Navbar() {
     };
   }, []);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsAdmin(false);
-    window.location.href = "/";
-  };
+const logout = async () => {
+  await supabase.auth.signOut();
+
+  Object.keys(localStorage).forEach((key) => {
+    if (
+      key.includes("supabase") ||
+      key.includes("mimotor-auth") ||
+      key.includes("sb-")
+    ) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  sessionStorage.clear();
+
+  setUser(null);
+  setIsAdmin(false);
+
+  window.location.href = "/login";
+};
 
   return (
     <nav className="border-b bg-white shadow-sm">
