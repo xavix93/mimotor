@@ -8,7 +8,7 @@ import type { User } from "@supabase/supabase-js";
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loadingSession, setLoadingSession] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const checkAdmin = async (userId: string) => {
     const { data, error } = await supabase
@@ -17,35 +17,40 @@ export default function Navbar() {
       .eq("id", userId)
       .maybeSingle();
 
-    if (error) {
-      console.error("Error revisando admin:", error.message);
+    if (error || !data) {
       setIsAdmin(false);
       return;
     }
 
-    setIsAdmin(!!data);
+    setIsAdmin(true);
   };
 
   useEffect(() => {
     let active = true;
 
     const loadSession = async () => {
-      const { data, error } = await supabase.auth.getUser();
+      try {
+        const { data } = await supabase.auth.getSession();
 
-      if (!active) return;
+        if (!active) return;
 
-      if (error || !data.user) {
+        const currentUser = data.session?.user ?? null;
+
+        setUser(currentUser);
+
+        if (currentUser) {
+          await checkAdmin(currentUser.id);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error("Error cargando sesión:", error);
         setUser(null);
         setIsAdmin(false);
-        setLoadingSession(false);
-        return;
-      }
-
-      setUser(data.user);
-      await checkAdmin(data.user.id);
-
-      if (active) {
-        setLoadingSession(false);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -56,6 +61,7 @@ export default function Navbar() {
         if (!active) return;
 
         const currentUser = session?.user ?? null;
+
         setUser(currentUser);
 
         if (currentUser) {
@@ -64,7 +70,7 @@ export default function Navbar() {
           setIsAdmin(false);
         }
 
-        setLoadingSession(false);
+        setLoading(false);
       }
     );
 
@@ -107,7 +113,7 @@ export default function Navbar() {
             Autos
           </Link>
 
-          {!loadingSession && user && (
+          {!loading && user && (
             <>
               <Link href="/publicar" className="hover:text-blue-700">
                 Publicar
@@ -129,7 +135,7 @@ export default function Navbar() {
             </>
           )}
 
-          {!loadingSession && !user && (
+          {!loading && !user && (
             <Link
               href="/login"
               className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
@@ -138,7 +144,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {!loadingSession && user && (
+          {!loading && user && (
             <button
               type="button"
               onClick={logout}
