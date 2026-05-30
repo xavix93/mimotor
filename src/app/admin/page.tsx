@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type CarImage = {
+  image_url: string;
+  sort_order: number | null;
+};
+
 type Car = {
   id: string;
   brand: string;
@@ -12,66 +17,79 @@ type Car = {
   mileage: number | null;
   region: string | null;
   commune: string | null;
+  status: string;
+  created_at: string;
   seller_name: string | null;
   seller_phone: string | null;
-  status: string;
-  is_featured: boolean;
-  created_at: string;
-  car_images: {
-    image_url: string;
-    sort_order?: number | null;
-  }[];
+  is_featured: boolean | null;
+  featured_until: string | null;
+  car_images: CarImage[];
 };
 
 export default function AdminPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const checkAdminAndLoadCars = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
+  const loadAdmin = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
 
-    if (!sessionData.session?.user) {
-      window.location.href = "/login";
-      return;
-    }
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-    const user = sessionData.session.user;
+      if (sessionError) {
+        setErrorMessage(sessionError.message);
+        return;
+      }
 
-    const { data: adminData, error: adminError } = await supabase
-      .from("admin_users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+      if (!sessionData.session?.user) {
+        window.location.href = "/login";
+        return;
+      }
 
-    if (adminError || !adminData) {
-      setIsAdmin(false);
+      const user = sessionData.session.user;
+
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (adminError || !adminData) {
+        setIsAdmin(false);
+        setErrorMessage("No tienes permisos para acceder al panel administrador.");
+        return;
+      }
+
+      setIsAdmin(true);
+
+      const { data, error } = await supabase
+        .from("cars")
+        .select("*, car_images(image_url, sort_order)")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      const orderedCars = (data || []).map((car: Car) => ({
+        ...car,
+        car_images: [...(car.car_images || [])].sort(
+          (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
+        ),
+      }));
+
+      setCars(orderedCars as Car[]);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Error cargando el panel administrador.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setIsAdmin(true);
-
-    const { data, error } = await supabase
-      .from("cars")
-      .select("*, car_images(image_url, sort_order)")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      alert(error.message);
-      setLoading(false);
-      return;
-    }
-
-    const orderedCars = ((data || []) as Car[]).map((car) => ({
-      ...car,
-      car_images: [...(car.car_images || [])].sort(
-        (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
-      ),
-    }));
-
-    setCars(orderedCars);
-    setLoading(false);
   };
 
   const updateStatus = async (id: string, status: string) => {
@@ -85,13 +103,19 @@ export default function AdminPage() {
       return;
     }
 
-    checkAdminAndLoadCars();
+    await loadAdmin();
   };
 
-  const toggleFeatured = async (id: string, currentValue: boolean) => {
+  const featureCar = async (id: string, days: number) => {
+    const until = new Date();
+    until.setDate(until.getDate() + days);
+
     const { error } = await supabase
       .from("cars")
-      .update({ is_featured: !currentValue })
+      .update({
+        is_featured: true,
+        featured_until: until.toISOString(),
+      })
       .eq("id", id);
 
     if (error) {
@@ -99,7 +123,24 @@ export default function AdminPage() {
       return;
     }
 
-    checkAdminAndLoadCars();
+    await loadAdmin();
+  };
+
+  const removeFeatured = async (id: string) => {
+    const { error } = await supabase
+      .from("cars")
+      .update({
+        is_featured: false,
+        featured_until: null,
+      })
+      .eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadAdmin();
   };
 
   const deleteCar = async (id: string) => {
@@ -116,11 +157,11 @@ export default function AdminPage() {
       return;
     }
 
-    checkAdminAndLoadCars();
+    await loadAdmin();
   };
 
   useEffect(() => {
-    checkAdminAndLoadCars();
+    loadAdmin();
   }, []);
 
   if (loading) {
@@ -134,58 +175,96 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-10">
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <h1 className="text-2xl font-bold">Acceso restringido</h1>
-          <p className="mt-2 text-slate-600">
-            Tu cuenta no tiene permisos de administrador.
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold">Acceso restringido</h1>
+        <p className="mt-2 text-slate-600">
+          No tienes permisos para entrar al panel administrador.
+        </p>
+
+        {errorMessage && (
+          <div className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
       </main>
     );
   }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Panel administrador</h1>
-        <p className="text-sm text-slate-600">
-          Aprueba, rechaza, destaca o elimina publicaciones de MiMotor.
-        </p>
-      </div>
+      <h1 className="mb-2 text-2xl font-bold">Panel administrador</h1>
+
+      <p className="mb-6 text-sm text-slate-600">
+        Administra publicaciones, aprobación de autos y destacados comerciales.
+      </p>
+
+      {errorMessage && (
+        <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
 
       {cars.length === 0 ? (
         <div className="rounded-2xl bg-white p-6 shadow">
-          <p>No hay publicaciones registradas.</p>
+          <p className="text-slate-600">No hay publicaciones registradas.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {cars.map((car) => (
-            <div
-              key={car.id}
-              className="grid gap-4 rounded-2xl bg-white p-4 shadow md:grid-cols-[180px_1fr]"
-            >
-              <div className="h-32 overflow-hidden rounded-xl bg-slate-200">
-                {car.car_images?.[0]?.image_url ? (
-                  <img
-                    src={car.car_images[0].image_url}
-                    alt={`${car.brand} ${car.model}`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                    Sin foto
+        <div className="space-y-5">
+          {cars.map((car) => {
+            const mainImage = car.car_images?.[0]?.image_url || null;
+
+            const isFeaturedActive =
+              car.is_featured &&
+              car.featured_until &&
+              new Date(car.featured_until) > new Date();
+
+            return (
+              <div
+                key={car.id}
+                className={`overflow-hidden rounded-2xl bg-white shadow ${
+                  isFeaturedActive ? "border-2 border-yellow-400" : ""
+                }`}
+              >
+                <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr]">
+                  <div className="overflow-hidden rounded-xl bg-slate-200">
+                    {mainImage ? (
+                      <img
+                        src={mainImage}
+                        alt={`${car.brand} ${car.model}`}
+                        className="h-40 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-40 items-center justify-center text-sm text-slate-500">
+                        Sin foto
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div>
-                <div className="flex flex-col justify-between gap-3 md:flex-row">
                   <div>
-                    <h2 className="text-lg font-bold">
-                      {car.brand} {car.model} {car.year}
-                    </h2>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold">
+                        {car.brand} {car.model} {car.year}
+                      </h2>
 
-                    <p className="text-sm text-slate-600">
+                      {isFeaturedActive && (
+                        <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-yellow-950">
+                          Destacado
+                        </span>
+                      )}
+
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+                        {car.status === "pending"
+                          ? "Pendiente"
+                          : car.status === "approved"
+                          ? "Aprobado"
+                          : "Rechazado"}
+                      </span>
+                    </div>
+
+                    <p className="font-semibold text-blue-700">
+                      ${car.price.toLocaleString("es-CL")}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-600">
                       {car.region || "Región no informada"},{" "}
                       {car.commune || "Comuna no informada"} ·{" "}
                       {car.mileage
@@ -193,73 +272,81 @@ export default function AdminPage() {
                         : "Kilometraje no informado"}
                     </p>
 
-                    <p className="mt-1 font-semibold text-blue-700">
-                      ${car.price.toLocaleString("es-CL")}
-                    </p>
-
-                    <p className="mt-1 text-sm">
+                    <p className="mt-2 text-sm text-slate-600">
                       Vendedor: {car.seller_name || "No informado"} ·{" "}
                       {car.seller_phone || "Sin teléfono"}
                     </p>
 
-                    <p className="mt-1 text-sm">
-                      Estado:{" "}
-                      <span className="font-bold">
-                        {car.status === "pending"
-                          ? "Pendiente"
-                          : car.status === "approved"
-                          ? "Aprobado"
-                          : "Rechazado"}
-                      </span>
-                    </p>
-
-                    {car.is_featured && (
-                      <span className="mt-2 inline-block rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
-                        Destacado
-                      </span>
+                    {isFeaturedActive && (
+                      <p className="mt-2 text-sm font-semibold text-yellow-700">
+                        Destacado hasta:{" "}
+                        {new Date(car.featured_until as string).toLocaleDateString(
+                          "es-CL"
+                        )}
+                      </p>
                     )}
-                  </div>
 
-                  <div className="flex flex-wrap items-start gap-2">
-                    <a
-                      href={`/autos/${car.id}`}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    >
-                      Ver
-                    </a>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <a
+                        href={`/autos/${car.id}`}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      >
+                        Ver
+                      </a>
 
-                    <button
-                      onClick={() => updateStatus(car.id, "approved")}
-                      className="rounded-lg bg-green-600 px-3 py-2 text-sm text-white"
-                    >
-                      Aprobar
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(car.id, "approved")}
+                        className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white"
+                      >
+                        Aprobar
+                      </button>
 
-                    <button
-                      onClick={() => updateStatus(car.id, "rejected")}
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm text-white"
-                    >
-                      Rechazar
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(car.id, "rejected")}
+                        className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white"
+                      >
+                        Rechazar
+                      </button>
 
-                    <button
-                      onClick={() => toggleFeatured(car.id, car.is_featured)}
-                      className="rounded-lg bg-yellow-500 px-3 py-2 text-sm text-white"
-                    >
-                      {car.is_featured ? "Quitar destacado" : "Destacar"}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => featureCar(car.id, 7)}
+                        className="rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-yellow-950"
+                      >
+                        Destacar 7 días
+                      </button>
 
-                    <button
-                      onClick={() => deleteCar(car.id)}
-                      className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white"
-                    >
-                      Eliminar
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => featureCar(car.id, 30)}
+                        className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-semibold text-yellow-950"
+                      >
+                        Destacar 30 días
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFeatured(car.id)}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      >
+                        Quitar destacado
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteCar(car.id)}
+                        className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>
