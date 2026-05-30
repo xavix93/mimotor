@@ -19,77 +19,38 @@ type Car = {
 export default function DashboardPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState("Iniciando panel...");
   const [errorMessage, setErrorMessage] = useState("");
 
   const loadMyCars = async () => {
     try {
       setLoading(true);
       setErrorMessage("");
-      setStep("Buscando sesión del usuario...");
 
-      const sessionResult = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Timeout buscando sesión del usuario.")),
-            8000
-          )
-        ),
-      ]);
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
 
-      const { data: sessionData, error: sessionError } = sessionResult as Awaited<
-        ReturnType<typeof supabase.auth.getSession>
-      >;
-
-      if (sessionError) {
-        setErrorMessage(sessionError.message);
-        return;
-      }
-
-      if (!sessionData.session?.user) {
-        setStep("No hay sesión. Redirigiendo al login...");
+      if (userError || !userData.user) {
         window.location.href = "/login";
         return;
       }
 
-      const user = sessionData.session.user;
+      const user = userData.user;
 
-      setStep(`Sesión encontrada: ${user.email}`);
-
-      setStep("Consultando publicaciones del usuario...");
-
-      const carsResult = await Promise.race([
-        supabase
-          .from("cars")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Timeout consultando publicaciones.")),
-            8000
-          )
-        ),
-      ]);
-
-      const { data, error } = carsResult as {
-        data: Car[] | null;
-        error: { message: string } | null;
-      };
+      const { data, error } = await supabase
+        .from("cars")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) {
         setErrorMessage(error.message);
         return;
       }
 
-      setCars(data || []);
-      setStep("Panel cargado correctamente.");
+      setCars((data || []) as Car[]);
     } catch (error) {
       console.error(error);
-      setErrorMessage(
-        error instanceof Error ? error.message : "Error desconocido."
-      );
+      setErrorMessage("Error cargando tus publicaciones.");
     } finally {
       setLoading(false);
     }
@@ -116,6 +77,14 @@ export default function DashboardPage() {
     loadMyCars();
   }, []);
 
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-10">
+        <p>Cargando publicaciones...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
@@ -123,9 +92,6 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">Mi panel</h1>
           <p className="text-sm text-slate-600">
             Aquí puedes revisar tus autos publicados en MiMotor.
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            Diagnóstico: {step}
           </p>
         </div>
 
@@ -137,19 +103,13 @@ export default function DashboardPage() {
         </a>
       </div>
 
-      {loading && (
-        <div className="mb-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
-          Cargando publicaciones...
-        </div>
-      )}
-
       {errorMessage && (
         <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">
           Error: {errorMessage}
         </div>
       )}
 
-      {!loading && cars.length === 0 ? (
+      {cars.length === 0 ? (
         <div className="rounded-2xl bg-white p-6 shadow">
           <p className="text-slate-600">Todavía no tienes publicaciones.</p>
         </div>

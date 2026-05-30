@@ -8,33 +8,44 @@ import type { User } from "@supabase/supabase-js";
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(true);
 
   const checkAdmin = async (userId: string) => {
     const { data, error } = await supabase
       .from("admin_users")
       .select("id")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error("Error revisando admin:", error.message);
       setIsAdmin(false);
       return;
     }
 
-    setIsAdmin(true);
+    setIsAdmin(!!data);
   };
 
   useEffect(() => {
+    let active = true;
+
     const loadSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getUser();
 
-      const currentUser = data.session?.user ?? null;
-      setUser(currentUser);
+      if (!active) return;
 
-      if (currentUser) {
-        await checkAdmin(currentUser.id);
-      } else {
+      if (error || !data.user) {
+        setUser(null);
         setIsAdmin(false);
+        setLoadingSession(false);
+        return;
+      }
+
+      setUser(data.user);
+      await checkAdmin(data.user.id);
+
+      if (active) {
+        setLoadingSession(false);
       }
     };
 
@@ -42,6 +53,8 @@ export default function Navbar() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!active) return;
+
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
@@ -50,34 +63,37 @@ export default function Navbar() {
         } else {
           setIsAdmin(false);
         }
+
+        setLoadingSession(false);
       }
     );
 
     return () => {
+      active = false;
       listener.subscription.unsubscribe();
     };
   }, []);
 
-const logout = async () => {
-  await supabase.auth.signOut();
+  const logout = async () => {
+    await supabase.auth.signOut();
 
-  Object.keys(localStorage).forEach((key) => {
-    if (
-      key.includes("supabase") ||
-      key.includes("mimotor-auth") ||
-      key.includes("sb-")
-    ) {
-      localStorage.removeItem(key);
-    }
-  });
+    Object.keys(localStorage).forEach((key) => {
+      if (
+        key.includes("supabase") ||
+        key.includes("mimotor-auth") ||
+        key.includes("sb-")
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
 
-  sessionStorage.clear();
+    sessionStorage.clear();
 
-  setUser(null);
-  setIsAdmin(false);
+    setUser(null);
+    setIsAdmin(false);
 
-  window.location.href = "/login";
-};
+    window.location.href = "/login";
+  };
 
   return (
     <nav className="border-b bg-white shadow-sm">
@@ -91,7 +107,7 @@ const logout = async () => {
             Autos
           </Link>
 
-          {user && (
+          {!loadingSession && user && (
             <>
               <Link href="/publicar" className="hover:text-blue-700">
                 Publicar
@@ -104,23 +120,25 @@ const logout = async () => {
               <Link href="/cuenta" className="hover:text-blue-700">
                 Mi cuenta
               </Link>
+
+              {isAdmin && (
+                <Link href="/admin" className="hover:text-blue-700">
+                  Admin
+                </Link>
+              )}
             </>
           )}
 
-          {isAdmin && (
-            <Link href="/admin" className="hover:text-blue-700">
-              Admin
-            </Link>
-          )}
-
-          {!user ? (
+          {!loadingSession && !user && (
             <Link
               href="/login"
               className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
             >
               Ingresar
             </Link>
-          ) : (
+          )}
+
+          {!loadingSession && user && (
             <button
               type="button"
               onClick={logout}
