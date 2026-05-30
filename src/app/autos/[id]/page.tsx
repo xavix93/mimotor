@@ -169,14 +169,6 @@ export default function CarDetailPage() {
               <strong>Color:</strong> {car.color || "No informado"}
             </p>
 
-            <p>
-              <strong>Estado:</strong>{" "}
-              {car.status === "pending"
-                ? "Pendiente"
-                : car.status === "approved"
-                ? "Aprobado"
-                : "Rechazado"}
-            </p>
           </div>
 
           <div className="mt-6">
