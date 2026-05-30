@@ -21,45 +21,73 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const loadMyCars = async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
+  useEffect(() => {
+    let isMounted = true;
 
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-
-      if (sessionError) {
-        setErrorMessage(sessionError.message);
-        return;
+    const timeout = setTimeout(() => {
+      if (isMounted && loading) {
+        setErrorMessage(
+          "La carga tardó demasiado. Puede ser un problema de sesión o permisos en Supabase."
+        );
+        setLoading(false);
       }
+    }, 8000);
 
-      if (!sessionData.session?.user) {
-        window.location.href = "/login";
-        return;
+    const loadMyCars = async () => {
+      try {
+        setErrorMessage("");
+
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (sessionError) {
+          setErrorMessage(sessionError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (!sessionData.session?.user) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const user = sessionData.session.user;
+
+        const { data, error } = await supabase
+          .from("cars")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (!isMounted) return;
+
+        if (error) {
+          setErrorMessage(error.message);
+          setLoading(false);
+          return;
+        }
+
+        setCars((data || []) as Car[]);
+        setLoading(false);
+      } catch (error) {
+        console.error(error);
+
+        if (isMounted) {
+          setErrorMessage("Error cargando tus publicaciones.");
+          setLoading(false);
+        }
       }
+    };
 
-      const user = sessionData.session.user;
+    loadMyCars();
 
-      const { data, error } = await supabase
-        .from("cars")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
-      setCars((data || []) as Car[]);
-    } catch (error) {
-      console.error(error);
-      setErrorMessage("Error cargando tus publicaciones.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
+  }, []);
 
   const deleteCar = async (id: string) => {
     const confirmDelete = confirm(
@@ -75,12 +103,8 @@ export default function DashboardPage() {
       return;
     }
 
-    await loadMyCars();
+    window.location.reload();
   };
-
-  useEffect(() => {
-    loadMyCars();
-  }, []);
 
   if (loading) {
     return (
@@ -110,7 +134,7 @@ export default function DashboardPage() {
 
       {errorMessage && (
         <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">
-          Error: {errorMessage}
+          {errorMessage}
         </div>
       )}
 
