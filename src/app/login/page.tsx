@@ -13,12 +13,17 @@ export default function LoginPage() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [userType, setUserType] = useState("particular");
+  const [businessName, setBusinessName] = useState("");
 
   const register = async () => {
     if (!email || !password || !firstName) {
       alert("Completa nombre, correo y contraseña.");
       return;
     }
+    if (userType === "automotora" && !businessName.trim()) {
+  alert("Ingresa el nombre de la automotora.");
+  return;
+}
 
     const fullName = `${firstName} ${lastName}`.trim();
 
@@ -27,12 +32,13 @@ export default function LoginPage() {
       password,
       options: {
         data: {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: fullName,
-          phone,
-          user_type: userType,
-        },
+  first_name: firstName,
+  last_name: lastName,
+  full_name: fullName,
+  phone,
+  user_type: userType,
+  business_name: userType === "automotora" ? businessName : null,
+},
       },
     });
 
@@ -45,13 +51,14 @@ export default function LoginPage() {
 
     if (user) {
       const { error: profileError } = await supabase.from("profiles").upsert({
-        id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        full_name: fullName,
-        phone,
-        user_type: userType,
-      });
+  id: user.id,
+  first_name: firstName,
+  last_name: lastName,
+  full_name: fullName,
+  phone,
+  user_type: userType,
+  business_name: userType === "automotora" ? businessName : null,
+});
 
       if (profileError) {
         alert(profileError.message);
@@ -82,18 +89,19 @@ export default function LoginPage() {
     window.location.href = "/";
   };
 
-  const loginWithProvider = async (provider: "google" | "facebook") => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/cuenta`,
-      },
-    });
+const loginWithProvider = async (provider: "google" | "facebook") => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/cuenta`,
+      scopes: provider === "facebook" ? "" : "email profile",
+    },
+  });
 
-    if (error) {
-      alert(error.message);
-    }
-  };
+  if (error) {
+    alert(error.message);
+  }
+};
 
   return (
     <main className="mx-auto max-w-md px-4 py-12">
@@ -170,6 +178,20 @@ export default function LoginPage() {
               <option value="particular">Particular</option>
               <option value="automotora">Automotora</option>
             </select>
+            {userType === "automotora" && (
+  <>
+    <label className="mb-2 block text-sm font-medium">
+      Nombre de la automotora
+    </label>
+    <input
+      className="mb-4 w-full rounded-lg border px-3 py-2"
+      type="text"
+      placeholder="Ej: Automotora Los Andes"
+      value={businessName}
+      onChange={(e) => setBusinessName(e.target.value)}
+    />
+  </>
+)}
           </>
         )}
 
