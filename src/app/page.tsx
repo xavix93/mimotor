@@ -107,14 +107,7 @@ export default function HomePage() {
             MiMotor es un portal para publicar, buscar y contactar vendedores de autos nuevos y usados.
           </p>
 
-          <div className="mt-6">
-            <Link
-              href="/publicar"
-              className="rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white"
-            >
-              Publicar mi auto
-            </Link>
-          </div>
+          
         </div>
       </section>
 
