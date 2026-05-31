@@ -63,29 +63,15 @@ export default function Navbar() {
     window.location.href = "/login";
   };
 
-  if (loading) {
-    return (
-      <nav className="border-b bg-white shadow-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-xl font-bold text-blue-700">
-            MiMotor
-          </Link>
-
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/" className="hover:text-blue-700">
-              Autos
-            </Link>
-          </div>
-        </div>
-      </nav>
-    );
-  }
-
   return (
     <nav className="border-b bg-white shadow-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-xl font-bold text-blue-700">
-          MiMotor
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <Link href="/" className="flex items-center">
+          <img
+            src="/mimotor-logo.png"
+            alt="MiMotor"
+            className="h-14 w-auto object-contain"
+          />
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
@@ -93,7 +79,7 @@ export default function Navbar() {
             Autos
           </Link>
 
-          {user && (
+          {!loading && user && (
             <>
               <Link href="/publicar" className="hover:text-blue-700">
                 Publicar
@@ -115,14 +101,16 @@ export default function Navbar() {
             </>
           )}
 
-          {!user ? (
+          {!loading && !user && (
             <Link
               href="/login"
               className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
             >
               Ingresar
             </Link>
-          ) : (
+          )}
+
+          {!loading && user && (
             <button
               type="button"
               onClick={logout}
