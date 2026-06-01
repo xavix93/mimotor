@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import GoogleAdSense from "@/components/GoogleAdSense";
 
 export const metadata: Metadata = {
-  title: "AutoMarket",
-  description: "Marketplace de autos nuevos y usados",
+  title: "MiMotor",
+  description: "Compra y venta de vehículos en Chile",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
-      <body className="bg-slate-50 text-slate-900">
+      <body>
+        <GoogleAdSense />
         <Navbar />
         {children}
       </body>
