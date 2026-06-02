@@ -86,19 +86,15 @@ export default function Navbar() {
                 Publicar
               </Link>
 
-              <Link href="/dashboard" className="hover:text-blue-700">
-                Mi panel
-              </Link>
 
               <Link href="/cuenta" className="hover:text-blue-700">
                 Mi cuenta
               </Link>
-
-              {isAdmin && (
-                <Link href="/admin" className="hover:text-blue-700">
-                  Admin
-                </Link>
-              )}
+  {isAdmin && (
+      <Link href="/admin" className="hover:text-blue-700">
+        Admin
+      </Link>
+    )}
             </>
           )}
 

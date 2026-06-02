@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import FavoritesInAccount from "@/components/FavoritesInAccount";
+import MyPanelInAccount from "@/components/MyPanelInAccount";
 
-type TabType = "perfil" | "favoritos" | "premium";
+type TabType = "perfil" | "favoritos" | "panel" | "premium";
 
 export default function CuentaPage() {
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ export default function CuentaPage() {
 
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
+  
 
   const [form, setForm] = useState({
     first_name: "",
@@ -39,8 +41,11 @@ export default function CuentaPage() {
       }
 
       const user = sessionData.session.user;
+
       setUserEmail(user.email || "");
       setUserId(user.id);
+
+  
 
       const metadata = user.user_metadata || {};
 
@@ -171,7 +176,6 @@ export default function CuentaPage() {
       }
 
       const user = sessionData.session.user;
-
       const fullName = `${form.first_name} ${form.last_name}`.trim();
 
       const { error } = await supabase.from("profiles").upsert({
@@ -289,19 +293,20 @@ export default function CuentaPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-10">
+      <main className="mx-auto max-w-5xl px-4 py-10">
         <p>Cargando cuenta...</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <div className="rounded-2xl bg-white p-6 shadow">
         <h1 className="mb-2 text-2xl font-bold">Mi cuenta</h1>
 
         <p className="mb-6 text-sm text-slate-600">
-          Administra tus datos, favoritos y servicios premium de MiMotor.
+          Administra tus datos, favoritos, publicaciones y servicios premium de
+          MiMotor.
         </p>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b">
@@ -331,6 +336,18 @@ export default function CuentaPage() {
 
           <button
             type="button"
+            onClick={() => setActiveTab("panel")}
+            className={`px-4 py-3 text-sm font-semibold ${
+              activeTab === "panel"
+                ? "border-b-2 border-blue-700 text-blue-700"
+                : "text-slate-500"
+            }`}
+          >
+            Mi panel
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("premium")}
             className={`px-4 py-3 text-sm font-semibold ${
               activeTab === "premium"
@@ -340,6 +357,8 @@ export default function CuentaPage() {
           >
             Servicios premium
           </button>
+
+         
         </div>
 
         {activeTab === "perfil" && (
@@ -431,6 +450,8 @@ export default function CuentaPage() {
           </section>
         )}
 
+        {activeTab === "panel" && <MyPanelInAccount />}
+
         {activeTab === "premium" && (
           <section>
             <div className="mb-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
@@ -488,6 +509,8 @@ export default function CuentaPage() {
             </div>
           </section>
         )}
+
+        
       </div>
     </main>
   );
