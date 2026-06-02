@@ -145,9 +145,13 @@ export default function CarDetailPage() {
                       className="relative z-10 h-full w-full object-contain p-2"
                     />
 
-                    <span className="absolute bottom-3 right-3 z-20 rounded-md bg-white/50 px-2 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
-                      mimotor.cl
-                    </span>
+                        <div className="absolute bottom-3 right-3 z-20">
+  <img
+    src="/watermark-logo.png"
+    alt="MiMotor"
+    className="h-20 w-auto opacity-80 "
+  />
+</div>
                   </>
                 ) : (
                   <div className="flex h-full items-center justify-center text-slate-500">

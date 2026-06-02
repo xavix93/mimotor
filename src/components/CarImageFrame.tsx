@@ -53,9 +53,13 @@ export default function CarImageFrame({
         )}
 
         {/* Sello de agua */}
-        <div className="absolute bottom-3 right-3 z-10 rounded-md bg-white/40 px-2 py-1 text-sm font-semibold text-slate-700 backdrop-blur-sm">
-          mimotor.cl
-        </div>
+       <div className="absolute bottom-3 right-3 z-20">
+  <img
+    src="/watermark-logo.png"
+    alt="MiMotor"
+    className="h-14 w-auto opacity-80"
+  />
+</div>
       </div>
     </div>
   );

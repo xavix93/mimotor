@@ -428,9 +428,13 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
                         </span>
                       )}
 
-                      <span className="absolute bottom-3 right-3 z-20 rounded-md bg-white/50 px-2 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
-                        mimotor.cl
-                      </span>
+                         <div className="absolute bottom-3 right-3 z-20">
+  <img
+    src="/watermark-logo.png"
+    alt="MiMotor"
+    className="h-14 w-auto opacity-80 "
+  />
+</div>
                     </div>
 
                     <div className="p-4">
