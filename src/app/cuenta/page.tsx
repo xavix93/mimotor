@@ -5,13 +5,13 @@ import { supabase } from "@/lib/supabaseClient";
 import FavoritesInAccount from "@/components/FavoritesInAccount";
 import MyPanelInAccount from "@/components/MyPanelInAccount";
 
-type TabType = "perfil" | "favoritos" | "panel" | "premium";
+type TabType = "panel" | "favoritos" | "perfil" | "premium";
 
 export default function CuentaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("perfil");
+const [activeTab, setActiveTab] = useState<TabType>("panel");
 
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
@@ -310,16 +310,16 @@ export default function CuentaPage() {
         </p>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b">
-          <button
+           <button
             type="button"
-            onClick={() => setActiveTab("perfil")}
+            onClick={() => setActiveTab("panel")}
             className={`px-4 py-3 text-sm font-semibold ${
-              activeTab === "perfil"
+              activeTab === "panel"
                 ? "border-b-2 border-blue-700 text-blue-700"
                 : "text-slate-500"
             }`}
           >
-            Datos de cuenta
+            Mi panel
           </button>
 
           <button
@@ -333,18 +333,18 @@ export default function CuentaPage() {
           >
             Favoritos
           </button>
-
-          <button
+<button
             type="button"
-            onClick={() => setActiveTab("panel")}
+            onClick={() => setActiveTab("perfil")}
             className={`px-4 py-3 text-sm font-semibold ${
-              activeTab === "panel"
+              activeTab === "perfil"
                 ? "border-b-2 border-blue-700 text-blue-700"
                 : "text-slate-500"
             }`}
           >
-            Mi panel
+            Datos de cuenta
           </button>
+         
 
           <button
             type="button"
