@@ -81,6 +81,7 @@ export default function Navbar() {
 
           {!loading && user && (
             <>
+    
               <Link href="/publicar" className="hover:text-blue-700">
                 Publicar
               </Link>

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import FavoritesInAccount from "@/components/FavoritesInAccount";
 
-type TabType = "perfil" | "premium";
+type TabType = "perfil" | "favoritos" | "premium";
 
 export default function CuentaPage() {
   const [loading, setLoading] = useState(true);
@@ -220,6 +221,10 @@ export default function CuentaPage() {
 
     const { error } = await supabase.from("service_requests").insert({
       user_id: userId,
+      user_email: userEmail,
+      user_phone: form.phone,
+      business_name:
+        form.user_type === "automotora" ? form.business_name : null,
       service_type: serviceType,
       service_name: serviceName,
       price,
@@ -245,7 +250,7 @@ export default function CuentaPage() {
       name: "Auto destacado 7 días",
       price: 4990,
       description:
-        "Tu publicación aparecerá destacada durante 7 días, con mayor visibilidad en MiMotor.",
+        "Tu publicación tendrá mayor visibilidad durante 7 días en MiMotor.",
       recommendedFor: "Ideal para vender más rápido.",
     },
     {
@@ -253,7 +258,7 @@ export default function CuentaPage() {
       name: "Auto destacado 30 días",
       price: 12990,
       description:
-        "Tu publicación aparecerá destacada durante 30 días y tendrá mejor visibilidad en la portada.",
+        "Tu publicación tendrá mayor visibilidad durante 30 días en MiMotor.",
       recommendedFor: "Ideal para autos de mayor valor.",
     },
     {
@@ -261,7 +266,7 @@ export default function CuentaPage() {
       name: "Automotora destacada",
       price: 29990,
       description:
-        "Tu automotora podrá aparecer en una sección destacada dentro de MiMotor.",
+        "Tu automotora podrá aparecer como destacada dentro de MiMotor.",
       recommendedFor: "Ideal para automotoras con varias publicaciones.",
     },
     {
@@ -269,8 +274,16 @@ export default function CuentaPage() {
       name: "Banner en publicaciones",
       price: 19990,
       description:
-        "Agrega un banner propio de tu automotora dentro de tus publicaciones.",
-      recommendedFor: "Ideal para promocionar financiamiento, ofertas o contacto.",
+        "Permite mostrar un banner promocional de tu automotora en tus publicaciones.",
+      recommendedFor: "Ideal para promociones, financiamiento o contacto.",
+    },
+    {
+      type: "business_pack",
+      name: "Pack automotora destacada + banner",
+      price: 39990,
+      description:
+        "Incluye automotora destacada y banner promocional en tus publicaciones.",
+      recommendedFor: "Ideal para automotoras que quieren más presencia.",
     },
   ];
 
@@ -288,10 +301,10 @@ export default function CuentaPage() {
         <h1 className="mb-2 text-2xl font-bold">Mi cuenta</h1>
 
         <p className="mb-6 text-sm text-slate-600">
-          Administra tus datos personales y servicios premium de MiMotor.
+          Administra tus datos, favoritos y servicios premium de MiMotor.
         </p>
 
-        <div className="mb-6 flex gap-2 border-b">
+        <div className="mb-6 flex flex-wrap gap-2 border-b">
           <button
             type="button"
             onClick={() => setActiveTab("perfil")}
@@ -302,6 +315,18 @@ export default function CuentaPage() {
             }`}
           >
             Datos de cuenta
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("favoritos")}
+            className={`px-4 py-3 text-sm font-semibold ${
+              activeTab === "favoritos"
+                ? "border-b-2 border-blue-700 text-blue-700"
+                : "text-slate-500"
+            }`}
+          >
+            Favoritos
           </button>
 
           <button
@@ -389,6 +414,7 @@ export default function CuentaPage() {
             {form.user_type !== "automotora" && <div className="mb-6" />}
 
             <button
+              type="button"
               onClick={updateProfile}
               disabled={saving}
               className="rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white disabled:bg-slate-400"
@@ -396,6 +422,13 @@ export default function CuentaPage() {
               {saving ? "Guardando..." : "Guardar cambios"}
             </button>
           </>
+        )}
+
+        {activeTab === "favoritos" && (
+          <section>
+            <h2 className="mb-2 text-xl font-bold">Mis favoritos</h2>
+            <FavoritesInAccount />
+          </section>
         )}
 
         {activeTab === "premium" && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useParams } from "next/navigation";
+import FavoriteButton from "@/components/FavoriteButton";
 
 type Car = {
   id: string;
@@ -135,9 +136,20 @@ export default function CarDetailPage() {
             {car.commune || "Comuna no informada"}
           </p>
 
-          <h1 className="text-3xl font-bold">
-            {car.brand} {car.model}
-          </h1>
+          <div className="mb-4 flex items-start justify-between gap-4">
+  <div>
+    <h1 className="text-3xl font-bold">
+      {car.brand} {car.model}
+    </h1>
+
+    <p className="text-slate-600">
+      {car.year} · {car.commune || "Comuna no informada"},{" "}
+      {car.region || "Región no informada"}
+    </p>
+  </div>
+
+  <FavoriteButton carId={car.id} />
+</div>
 
           <p className="mt-4 text-3xl font-bold text-blue-700">
             ${car.price.toLocaleString("es-CL")}
