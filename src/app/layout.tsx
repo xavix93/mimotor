@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import GoogleAdSense from "@/components/GoogleAdSense";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "MiMotor",
@@ -19,6 +20,7 @@ export default function RootLayout({
         <GoogleAdSense />
         <Navbar />
         {children}
+          <Footer />
       </body>
     </html>
   );

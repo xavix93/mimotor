@@ -75,9 +75,9 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
-          <Link href="/" className="hover:text-blue-700">
-            Autos
-          </Link>
+     <Link href="/buscar-autos" className="hover:text-blue-700">
+  Autos
+</Link>
 
           {!loading && user && (
             <>

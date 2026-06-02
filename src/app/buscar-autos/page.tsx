@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -41,23 +42,27 @@ type Filters = {
   transmission: string;
 };
 
-export default function AutosPage() {
+function BuscarAutosContent() {
+    const searchParams = useSearchParams();
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  
 
-  const [filters, setFilters] = useState<Filters>({
-    brand: "",
-    model: "",
-    region: "",
-    minPrice: "",
-    maxPrice: "",
-    minYear: "",
-    maxYear: "",
-    maxMileage: "",
-    fuelType: "",
-    transmission: "",
-  });
+  const initialFilters: Filters = {
+  brand: searchParams.get("brand") || "",
+  model: searchParams.get("model") || "",
+  region: searchParams.get("region") || "",
+  minPrice: "",
+  maxPrice: "",
+  minYear: "",
+  maxYear: "",
+  maxMileage: "",
+  fuelType: "",
+  transmission: "",
+};
+
+const [filters, setFilters] = useState<Filters>(initialFilters);
 
   const isFeaturedActive = (car: Car) => {
     if (!car.is_featured || !car.featured_until) return false;
@@ -161,8 +166,9 @@ export default function AutosPage() {
   };
 
   useEffect(() => {
-    loadCars();
-  }, []);
+  loadCars(initialFilters);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const applyFilters = async () => {
     await loadCars(filters);
@@ -461,5 +467,18 @@ export default function AutosPage() {
         )}
       </section>
     </main>
+  );
+}
+export default function BuscarAutosPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-6xl px-4 py-10">
+          <p>Cargando búsqueda...</p>
+        </main>
+      }
+    >
+      <BuscarAutosContent />
+    </Suspense>
   );
 }
