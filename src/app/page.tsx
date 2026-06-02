@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import HomeBannerSlider from "@/components/HomeBannerSlider";
 
 type CarImage = {
   image_url: string;
@@ -190,6 +191,7 @@ export default function HomePage() {
   };
 
   return (
+    
     <main className="bg-slate-50">
       <section className="bg-blue-950 text-white">
         <div className="mx-auto max-w-6xl px-4 py-12">
@@ -203,6 +205,8 @@ export default function HomePage() {
           </p>
         </div>
       </section>
+
+  <HomeBannerSlider />
 
       <section className="mx-auto -mt-2 max-w-6xl px-4 py-8">
         <div className="rounded-2xl bg-white p-10 p-5 shadow-2xl shadow-blue-950/25">
