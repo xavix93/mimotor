@@ -166,7 +166,7 @@ export default function Footer() {
             <span className="text-sm text-slate-400">Síguenos</span>
 
             <a
-              href="https://www.instagram.com/"
+              href="https://www.instagram.com/mimotor.cl/"
               target="_blank"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white hover:bg-white/20"
             >
