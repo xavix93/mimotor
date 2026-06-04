@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type PreviewImage = {
@@ -18,6 +18,7 @@ type Profile = {
 
 export default function PublicarPage() {
   const MAX_IMAGES = 20;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -460,12 +461,28 @@ export default function PublicarPage() {
           </p>
 
           <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => handleSelectImages(e.target.files)}
-            className="mt-4 w-full rounded-lg border bg-white px-3 py-2"
-          />
+  ref={fileInputRef}
+  type="file"
+  accept="image/*"
+  multiple
+  onChange={(e) => {
+    handleSelectImages(e.target.files);
+    e.target.value = "";
+  }}
+  className="hidden"
+/>
+
+<button
+  type="button"
+  onClick={() => fileInputRef.current?.click()}
+  className="mt-4 rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800"
+>
+  Elegir fotos
+</button>
+
+<p className="mt-2 text-xs text-slate-500">
+  Puedes seguir agregando fotos hasta completar el máximo permitido.
+</p>
 
           {selectedImages.length > 0 && (
             <div className="mt-5 grid gap-4 md:grid-cols-3">

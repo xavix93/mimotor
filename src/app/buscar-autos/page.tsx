@@ -43,26 +43,26 @@ type Filters = {
 };
 
 function BuscarAutosContent() {
-    const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
+
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  
 
-  const initialFilters: Filters = {
-  brand: searchParams.get("brand") || "",
-  model: searchParams.get("model") || "",
-  region: searchParams.get("region") || "",
-  minPrice: "",
-  maxPrice: "",
-  minYear: "",
-  maxYear: "",
-  maxMileage: "",
-  fuelType: "",
-  transmission: "",
-};
+  const getFiltersFromUrl = (): Filters => ({
+    brand: searchParams.get("brand") || "",
+    model: searchParams.get("model") || "",
+    region: searchParams.get("region") || "",
+    minPrice: searchParams.get("minPrice") || "",
+    maxPrice: searchParams.get("maxPrice") || "",
+    minYear: searchParams.get("minYear") || "",
+    maxYear: searchParams.get("maxYear") || "",
+    maxMileage: searchParams.get("maxMileage") || "",
+    fuelType: searchParams.get("fuelType") || "",
+    transmission: searchParams.get("transmission") || "",
+  });
 
-const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [filters, setFilters] = useState<Filters>(getFiltersFromUrl());
 
   const isFeaturedActive = (car: Car) => {
     if (!car.is_featured || !car.featured_until) return false;
@@ -83,7 +83,7 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
     });
   };
 
-  const loadCars = async (customFilters = filters) => {
+  const loadCars = async (customFilters: Filters) => {
     try {
       setLoading(true);
 
@@ -166,9 +166,13 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
   };
 
   useEffect(() => {
-  loadCars(initialFilters);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    const urlFilters = getFiltersFromUrl();
+
+    setFilters(urlFilters);
+    loadCars(urlFilters);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
 
   const applyFilters = async () => {
     await loadCars(filters);
@@ -190,17 +194,19 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
 
     setFilters(emptyFilters);
     await loadCars(emptyFilters);
+
+    window.history.replaceState(null, "", "/buscar-autos");
   };
 
   return (
     <main className="bg-slate-50">
       <section className="bg-[#071A3D] text-white">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <h1 className="text-3xl font-bold md:text-4xl">
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <h1 className="text-2xl font-bold md:text-3xl">
             Autos publicados
           </h1>
 
-          <p className="mt-3 max-w-2xl text-slate-200">
+          <p className="mt-2 max-w-2xl text-sm text-slate-200">
             Busca autos nuevos y usados publicados en MiMotor.
           </p>
         </div>
@@ -218,6 +224,9 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
               }
               placeholder="Marca"
               className="rounded-lg border px-3 py-3"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyFilters();
+              }}
             />
 
             <input
@@ -227,6 +236,9 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
               }
               placeholder="Modelo"
               className="rounded-lg border px-3 py-3"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyFilters();
+              }}
             />
 
             <input
@@ -236,6 +248,9 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
               }
               placeholder="Región"
               className="rounded-lg border px-3 py-3"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyFilters();
+              }}
             />
           </div>
 
@@ -392,9 +407,8 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
                 const featured = isFeaturedActive(car);
 
                 return (
-                  <Link
+                  <div
                     key={car.id}
-                    href={`/autos/${car.id}`}
                     className={`overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-lg ${
                       featured ? "border-2 border-yellow-400" : "border"
                     }`}
@@ -428,13 +442,13 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
                         </span>
                       )}
 
-                         <div className="absolute bottom-3 right-3 z-20">
-  <img
-    src="/watermark-logo.png"
-    alt="MiMotor"
-    className="h-14 w-auto opacity-80 "
-  />
-</div>
+                      <div className="absolute bottom-3 right-3 z-20">
+                        <img
+                          src="/watermark-logo.png"
+                          alt="MiMotor"
+                          className="h-6 w-auto opacity-30"
+                        />
+                      </div>
                     </div>
 
                     <div className="p-4">
@@ -459,11 +473,14 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
                         {car.transmission || "Transmisión no informada"}
                       </p>
 
-                      <div className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white">
+                      <Link
+                        href={`/autos/${car.id}`}
+                        className="mt-4 block rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
+                      >
                         Ver publicación
-                      </div>
+                      </Link>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -473,6 +490,7 @@ const [filters, setFilters] = useState<Filters>(initialFilters);
     </main>
   );
 }
+
 export default function BuscarAutosPage() {
   return (
     <Suspense
