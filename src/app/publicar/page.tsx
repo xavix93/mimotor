@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type PreviewImage = {
@@ -8,11 +8,21 @@ type PreviewImage = {
   previewUrl: string;
 };
 
-export default function PublicarPage() {
-  const [loading, setLoading] = useState(false);
-  const [selectedImages, setSelectedImages] = useState<PreviewImage[]>([]);
+type Profile = {
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  user_type: string | null;
+  business_name: string | null;
+};
 
+export default function PublicarPage() {
   const MAX_IMAGES = 20;
+
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [selectedImages, setSelectedImages] = useState<PreviewImage[]>([]);
 
   const [form, setForm] = useState({
     brand: "",
@@ -27,6 +37,30 @@ export default function PublicarPage() {
     color: "",
     description: "",
   });
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error(error.message);
+        window.location.href = "/login?redirect=/publicar";
+        return;
+      }
+
+      const user = data.session?.user;
+
+      if (!user) {
+        window.location.href = "/login?redirect=/publicar";
+        return;
+      }
+
+      setUserId(user.id);
+      setCheckingSession(false);
+    };
+
+    checkSession();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -49,7 +83,16 @@ export default function PublicarPage() {
       return;
     }
 
-    const newImages = filesArray.map((file) => ({
+    const onlyImages = filesArray.filter((file) =>
+      file.type.startsWith("image/")
+    );
+
+    if (onlyImages.length !== filesArray.length) {
+      alert("Solo puedes subir archivos de imagen.");
+      return;
+    }
+
+    const newImages = onlyImages.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
     }));
@@ -77,9 +120,7 @@ export default function PublicarPage() {
     setSelectedImages((current) => current.filter((_, i) => i !== index));
   };
 
-  const publishCar = async () => {
-    if (loading) return;
-
+  const validateForm = () => {
     const requiredFields = [
       { key: "brand", label: "Marca" },
       { key: "model", label: "Modelo" },
@@ -98,96 +139,82 @@ export default function PublicarPage() {
           .map((field) => `- ${field.label}`)
           .join("\n")}`
       );
-      return;
+      return false;
+    }
+
+    const currentYear = new Date().getFullYear() + 1;
+    const year = Number(form.year);
+    const price = Number(form.price);
+
+    if (Number.isNaN(year) || year < 1900 || year > currentYear) {
+      alert("Ingresa un año válido.");
+      return false;
+    }
+
+    if (Number.isNaN(price) || price <= 0) {
+      alert("Ingresa un precio válido.");
+      return false;
+    }
+
+    if (form.mileage && Number(form.mileage) < 0) {
+      alert("El kilometraje no puede ser negativo.");
+      return false;
     }
 
     if (selectedImages.length > MAX_IMAGES) {
       alert(`Puedes subir un máximo de ${MAX_IMAGES} fotos.`);
-      return;
+      return false;
     }
 
-    setLoading(true);
+    return true;
+  };
 
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    if (!sessionData.session?.user) {
-      alert("Debes iniciar sesión para publicar.");
-      setLoading(false);
-      window.location.href = "/login";
-      return;
-    }
-
-    const user = sessionData.session.user;
-
-    const { data: profile, error: profileError } = await supabase
+  const getProfile = async () => {
+    const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, phone, user_type, business_name")
-      .eq("id", user.id)
-      .single();
+      .select("first_name, last_name, phone, user_type, business_name")
+      .eq("id", userId)
+      .maybeSingle();
 
-    if (profileError || !profile) {
+    if (error) {
+      alert(error.message);
+      return null;
+    }
+
+    if (!data) {
       alert("Primero completa tus datos en Mi cuenta antes de publicar.");
-      setLoading(false);
       window.location.href = "/cuenta";
-      return;
+      return null;
     }
 
-    if (!profile.phone) {
+    return data as Profile;
+  };
+
+  const validateProfile = (profile: Profile) => {
+    if (!profile.phone?.trim()) {
       alert("Debes completar tu teléfono en Mi cuenta antes de publicar.");
-      setLoading(false);
       window.location.href = "/cuenta";
-      return;
+      return false;
     }
 
-    if (profile.user_type === "automotora" && !profile.business_name) {
+    if (profile.user_type === "automotora" && !profile.business_name?.trim()) {
       alert(
         "Debes completar el nombre de tu automotora en Mi cuenta antes de publicar."
       );
-      setLoading(false);
       window.location.href = "/cuenta";
-      return;
+      return false;
     }
 
-    if (profile.user_type !== "automotora" && !profile.first_name) {
+    if (profile.user_type !== "automotora" && !profile.first_name?.trim()) {
       alert("Debes completar tu nombre en Mi cuenta antes de publicar.");
-      setLoading(false);
       window.location.href = "/cuenta";
-      return;
+      return false;
     }
 
-    const sellerName =
-      profile.user_type === "automotora"
-        ? profile.business_name
-        : profile.first_name;
+    return true;
+  };
 
-    const { data: car, error: carError } = await supabase
-      .from("cars")
-      .insert({
-        user_id: user.id,
-        brand: form.brand,
-        model: form.model,
-        year: Number(form.year),
-        price: Number(form.price),
-        mileage: form.mileage ? Number(form.mileage) : null,
-        region: form.region || null,
-        commune: form.commune || null,
-        fuel_type: form.fuel_type || null,
-        transmission: form.transmission || null,
-        color: form.color || null,
-        description: form.description || null,
-        seller_name: sellerName,
-        seller_phone: profile.phone,
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (carError || !car) {
-      alert(carError?.message || "Error al publicar el auto.");
-      setLoading(false);
-      return;
-    }
-
+  const uploadCarImages = async (carId: string) => {
     for (let i = 0; i < selectedImages.length; i++) {
       const file = selectedImages[i].file;
 
@@ -196,11 +223,14 @@ export default function PublicarPage() {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9.-]/g, "-");
 
-      const filePath = `${user.id}/${car.id}/${Date.now()}-${i}-${safeFileName}`;
+      const filePath = `${userId}/${carId}/${Date.now()}-${i}-${safeFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("car-images")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (uploadError) {
         alert(`Error subiendo foto ${i + 1}: ${uploadError.message}`);
@@ -214,7 +244,7 @@ export default function PublicarPage() {
       const { error: imageInsertError } = await supabase
         .from("car_images")
         .insert({
-          car_id: car.id,
+          car_id: carId,
           image_url: publicUrlData.publicUrl,
           sort_order: i,
         });
@@ -223,11 +253,86 @@ export default function PublicarPage() {
         alert(`Error guardando foto ${i + 1}: ${imageInsertError.message}`);
       }
     }
-
-    setLoading(false);
-    alert("Auto publicado correctamente. Quedará pendiente de aprobación.");
-    window.location.href = "/dashboard";
   };
+
+  const publishCar = async () => {
+    if (loading) return;
+
+    if (!userId) {
+      alert("Debes iniciar sesión para publicar.");
+      window.location.href = "/login?redirect=/publicar";
+      return;
+    }
+
+    if (!validateForm()) return;
+
+    setLoading(true);
+
+    try {
+      const profile = await getProfile();
+
+      if (!profile) {
+        setLoading(false);
+        return;
+      }
+
+      if (!validateProfile(profile)) {
+        setLoading(false);
+        return;
+      }
+
+      const sellerName =
+        profile.user_type === "automotora"
+          ? profile.business_name
+          : `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
+
+      const { data: car, error: carError } = await supabase
+        .from("cars")
+        .insert({
+          user_id: userId,
+          brand: form.brand.trim(),
+          model: form.model.trim(),
+          year: Number(form.year),
+          price: Number(form.price),
+          mileage: form.mileage ? Number(form.mileage) : null,
+          region: form.region.trim() || null,
+          commune: form.commune.trim() || null,
+          fuel_type: form.fuel_type || null,
+          transmission: form.transmission || null,
+          color: form.color.trim() || null,
+          description: form.description.trim() || null,
+          seller_name: sellerName || null,
+          seller_phone: profile.phone,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (carError || !car) {
+        alert(carError?.message || "Error al publicar el auto.");
+        setLoading(false);
+        return;
+      }
+
+      await uploadCarImages(car.id);
+
+      alert("Auto publicado correctamente. Quedará pendiente de aprobación.");
+      window.location.href = "/cuenta";
+    } catch (error) {
+      console.error(error);
+      alert("Error inesperado al publicar.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checkingSession) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-10">
+        <p>Verificando sesión...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
@@ -239,14 +344,14 @@ export default function PublicarPage() {
         </p>
 
         <div className="mb-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
-          Los datos de contacto del vendedor se tomarán automáticamente desde
-          tu sección “Mi cuenta”.
+          Los datos de contacto del vendedor se tomarán automáticamente desde tu
+          sección “Mi cuenta”.
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <input
             name="brand"
-            placeholder="Marca"
+            placeholder="Marca *"
             value={form.brand}
             onChange={handleChange}
             className="rounded-lg border px-3 py-2"
@@ -254,7 +359,7 @@ export default function PublicarPage() {
 
           <input
             name="model"
-            placeholder="Modelo"
+            placeholder="Modelo *"
             value={form.model}
             onChange={handleChange}
             className="rounded-lg border px-3 py-2"
@@ -262,7 +367,7 @@ export default function PublicarPage() {
 
           <input
             name="year"
-            placeholder="Año"
+            placeholder="Año *"
             type="number"
             value={form.year}
             onChange={handleChange}
@@ -271,7 +376,7 @@ export default function PublicarPage() {
 
           <input
             name="price"
-            placeholder="Precio"
+            placeholder="Precio *"
             type="number"
             value={form.price}
             onChange={handleChange}
@@ -309,11 +414,12 @@ export default function PublicarPage() {
             onChange={handleChange}
             className="rounded-lg border px-3 py-2"
           >
-            <option value="">Tipo de combustible</option>
+            <option value="">Combustible</option>
             <option value="Bencina">Bencina</option>
             <option value="Diésel">Diésel</option>
             <option value="Híbrido">Híbrido</option>
             <option value="Eléctrico">Eléctrico</option>
+            <option value="Gas">Gas</option>
           </select>
 
           <select
@@ -341,54 +447,38 @@ export default function PublicarPage() {
           placeholder="Descripción del vehículo"
           value={form.description}
           onChange={handleChange}
-          className="mt-4 h-32 w-full rounded-lg border px-3 py-2"
+          rows={5}
+          className="mt-4 w-full rounded-lg border px-3 py-2"
         />
 
-        <div className="mt-6">
-          <label className="mb-2 block text-sm font-medium">
-            Fotos del vehículo
-          </label>
+        <div className="mt-6 rounded-xl border bg-slate-50 p-4">
+          <h2 className="font-bold">Fotos del vehículo</h2>
 
-          <label className="inline-block cursor-pointer rounded-lg bg-slate-800 px-5 py-3 font-semibold text-white hover:bg-slate-700">
-            Seleccionar fotos
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                handleSelectImages(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
-
-          <p className="mt-2 text-sm text-slate-500">
-            {selectedImages.length > 0
-              ? `${selectedImages.length} foto(s) seleccionada(s). Máximo ${MAX_IMAGES}.`
-              : `Puedes seleccionar hasta ${MAX_IMAGES} fotos.`}
+          <p className="mt-1 text-sm text-slate-600">
+            Puedes subir hasta {MAX_IMAGES} fotos. La primera foto será la
+            principal.
           </p>
-        </div>
 
-        {selectedImages.length > 0 && (
-          <div className="mt-6">
-            <h2 className="mb-3 text-lg font-bold">Orden de las fotos</h2>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => handleSelectImages(e.target.files)}
+            className="mt-4 w-full rounded-lg border bg-white px-3 py-2"
+          />
 
-            <p className="mb-4 text-sm text-slate-600">
-              La primera foto será la imagen principal de la publicación.
-            </p>
-
-            <div className="grid gap-4 md:grid-cols-3">
+          {selectedImages.length > 0 && (
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
               {selectedImages.map((image, index) => (
                 <div
-                  key={image.previewUrl}
+                  key={`${image.previewUrl}-${index}`}
                   className="overflow-hidden rounded-xl border bg-white"
                 >
-                  <div className="relative">
+                  <div className="relative aspect-square bg-slate-100">
                     <img
                       src={image.previewUrl}
                       alt={`Foto ${index + 1}`}
-                      className="h-36 w-full object-cover"
+                      className="h-full w-full object-cover"
                     />
 
                     {index === 0 && (
@@ -398,43 +488,44 @@ export default function PublicarPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 p-2">
+                  <div className="flex items-center justify-between gap-2 p-3">
                     <button
                       type="button"
                       onClick={() => moveImage(index, "up")}
                       disabled={index === 0}
-                      className="rounded-lg border px-2 py-1 text-sm disabled:opacity-40"
+                      className="rounded-lg border px-3 py-1 text-sm disabled:opacity-40"
                     >
-                      Subir
+                      ↑
                     </button>
 
                     <button
                       type="button"
                       onClick={() => moveImage(index, "down")}
                       disabled={index === selectedImages.length - 1}
-                      className="rounded-lg border px-2 py-1 text-sm disabled:opacity-40"
+                      className="rounded-lg border px-3 py-1 text-sm disabled:opacity-40"
                     >
-                      Bajar
+                      ↓
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="rounded-lg bg-red-600 px-3 py-1 text-sm font-semibold text-white"
+                    >
+                      Quitar
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="w-full bg-red-600 px-3 py-2 text-sm font-semibold text-white"
-                  >
-                    Quitar foto
-                  </button>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <button
+          type="button"
           onClick={publishCar}
           disabled={loading}
-          className="mt-6 rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white disabled:bg-slate-400"
+          className="mt-6 w-full rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white hover:bg-blue-800 disabled:bg-slate-400"
         >
           {loading ? "Publicando..." : "Publicar auto"}
         </button>
