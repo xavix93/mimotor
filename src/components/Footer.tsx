@@ -124,6 +124,9 @@ export default function Footer() {
               <Link href="/seguridad" className="block hover:text-white">
                 Consejos de seguridad
               </Link>
+              <Link href="/quienes-somos" className="block hover:text-white">
+                Quienes somos
+              </Link>
             </div>
           </div>
         </div>
