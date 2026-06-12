@@ -29,7 +29,6 @@ type Car = {
   seller_phone: string | null;
   status: string;
   car_images: CarImage[] | null;
-  
 };
 
 export default function CarDetailPage() {
@@ -117,7 +116,10 @@ export default function CarDetailPage() {
     );
   }
 
-  const cleanPhone = car.seller_phone?.replace(/\D/g, "") || "";
+  const rawPhone = car.seller_phone?.replace(/\D/g, "") || "";
+
+  const cleanPhone =
+    rawPhone.startsWith("56") ? rawPhone : rawPhone ? `56${rawPhone}` : "";
 
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
@@ -148,13 +150,13 @@ export default function CarDetailPage() {
                       className="relative z-10 h-full w-full object-contain p-2"
                     />
 
-                        <div className="absolute bottom-3 right-3 z-20">
-  <img
-    src="/watermark-logo.png"
-    alt="MiMotor"
-    className="h-20 w-auto opacity-80 "
-  />
-</div>
+                    <div className="absolute bottom-3 right-3 z-20">
+                      <img
+                        src="/watermark-logo.png"
+                        alt="MiMotor"
+                        className="h-20 w-auto opacity-80"
+                      />
+                    </div>
                   </>
                 ) : (
                   <div className="flex h-full items-center justify-center text-slate-500">
@@ -258,20 +260,34 @@ export default function CarDetailPage() {
               </p>
             </div>
 
-            {cleanPhone && (
+            {cleanPhone ? (
               <a
                 href={whatsappUrl}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="mt-6 block rounded-lg bg-green-600 px-6 py-3 text-center font-semibold text-white hover:bg-green-700"
               >
                 Contactar por WhatsApp
               </a>
+            ) : (
+              <div className="mt-6 rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                El vendedor no tiene WhatsApp informado.
+              </div>
             )}
+
             <StartChatButton
-  carId={car.id}
-  sellerId={car.user_id}
-  carTitle={`${car.brand} ${car.model} ${car.year}`}
-/>
+              carId={car.id}
+              sellerId={car.user_id}
+              carTitle={`${car.brand} ${car.model} ${car.year}`}
+            />
+
+            <div className="mt-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+              <p className="font-semibold">Consejo MiMotor</p>
+              <p className="mt-1">
+                Antes de comprar, revisa documentos, multas, revisión técnica y
+                agenda siempre en lugares seguros.
+              </p>
+            </div>
           </section>
         </div>
       </section>
