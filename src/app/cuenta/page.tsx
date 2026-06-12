@@ -1,21 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import FavoritesInAccount from "@/components/FavoritesInAccount";
 import MyPanelInAccount from "@/components/MyPanelInAccount";
+import MessagesInAccount from "@/components/MessagesInAccount";
 
-type TabType = "panel" | "favoritos" | "perfil" | "premium";
+type TabType = "panel" | "mensajes" | "favoritos" | "perfil" | "premium";
 
-export default function CuentaPage() {
+function CuentaContent() {
+  const searchParams = useSearchParams();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [requesting, setRequesting] = useState(false);
-const [activeTab, setActiveTab] = useState<TabType>("panel");
+
+  const [activeTab, setActiveTab] = useState<TabType>(
+    searchParams.get("tab") === "mensajes" ? "mensajes" : "panel"
+  );
 
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
-  
 
   const [form, setForm] = useState({
     first_name: "",
@@ -44,8 +50,6 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
 
       setUserEmail(user.email || "");
       setUserId(user.id);
-
-  
 
       const metadata = user.user_metadata || {};
 
@@ -305,12 +309,12 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
         <h1 className="mb-2 text-2xl font-bold">Mi cuenta</h1>
 
         <p className="mb-6 text-sm text-slate-600">
-          Administra tus datos, favoritos, publicaciones y servicios premium de
-          MiMotor.
+          Administra tus publicaciones, mensajes, favoritos, datos y servicios
+          premium de MiMotor.
         </p>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b">
-           <button
+          <button
             type="button"
             onClick={() => setActiveTab("panel")}
             className={`px-4 py-3 text-sm font-semibold ${
@@ -324,6 +328,18 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
 
           <button
             type="button"
+            onClick={() => setActiveTab("mensajes")}
+            className={`px-4 py-3 text-sm font-semibold ${
+              activeTab === "mensajes"
+                ? "border-b-2 border-blue-700 text-blue-700"
+                : "text-slate-500"
+            }`}
+          >
+            Mensajes
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("favoritos")}
             className={`px-4 py-3 text-sm font-semibold ${
               activeTab === "favoritos"
@@ -333,7 +349,8 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
           >
             Favoritos
           </button>
-<button
+
+          <button
             type="button"
             onClick={() => setActiveTab("perfil")}
             className={`px-4 py-3 text-sm font-semibold ${
@@ -344,7 +361,6 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
           >
             Datos de cuenta
           </button>
-         
 
           <button
             type="button"
@@ -357,9 +373,18 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
           >
             Servicios premium
           </button>
-
-         
         </div>
+
+        {activeTab === "panel" && <MyPanelInAccount />}
+
+        {activeTab === "mensajes" && <MessagesInAccount />}
+
+        {activeTab === "favoritos" && (
+          <section>
+            <h2 className="mb-2 text-xl font-bold">Mis favoritos</h2>
+            <FavoritesInAccount />
+          </section>
+        )}
 
         {activeTab === "perfil" && (
           <>
@@ -443,15 +468,6 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
           </>
         )}
 
-        {activeTab === "favoritos" && (
-          <section>
-            <h2 className="mb-2 text-xl font-bold">Mis favoritos</h2>
-            <FavoritesInAccount />
-          </section>
-        )}
-
-        {activeTab === "panel" && <MyPanelInAccount />}
-
         {activeTab === "premium" && (
           <section>
             <div className="mb-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
@@ -488,11 +504,7 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
                         service.type,
                         service.name,
                         service.price,
-                        `Solicitud desde Mi cuenta. Usuario: ${
-                          form.first_name
-                        } ${form.last_name}. Tipo: ${
-                          form.user_type
-                        }. Automotora: ${form.business_name || "No aplica"}.`
+                        `Solicitud desde Mi cuenta. Usuario: ${form.first_name} ${form.last_name}. Tipo: ${form.user_type}. Automotora: ${form.business_name || "No aplica"}.`
                       )
                     }
                     className="mt-5 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:bg-slate-400"
@@ -509,9 +521,21 @@ const [activeTab, setActiveTab] = useState<TabType>("panel");
             </div>
           </section>
         )}
-
-        
       </div>
     </main>
+  );
+}
+
+export default function CuentaPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-5xl px-4 py-10">
+          <p>Cargando cuenta...</p>
+        </main>
+      }
+    >
+      <CuentaContent />
+    </Suspense>
   );
 }

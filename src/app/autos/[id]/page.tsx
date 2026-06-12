@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import FavoriteButton from "@/components/FavoriteButton";
+import StartChatButton from "@/components/StartChatButton";
 
 type CarImage = {
   image_url: string;
@@ -12,6 +13,7 @@ type CarImage = {
 
 type Car = {
   id: string;
+  user_id: string;
   brand: string;
   model: string;
   year: number;
@@ -27,6 +29,7 @@ type Car = {
   seller_phone: string | null;
   status: string;
   car_images: CarImage[] | null;
+  
 };
 
 export default function CarDetailPage() {
@@ -264,6 +267,11 @@ export default function CarDetailPage() {
                 Contactar por WhatsApp
               </a>
             )}
+            <StartChatButton
+  carId={car.id}
+  sellerId={car.user_id}
+  carTitle={`${car.brand} ${car.model} ${car.year}`}
+/>
           </section>
         </div>
       </section>
