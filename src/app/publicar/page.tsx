@@ -25,19 +25,62 @@ export default function PublicarPage() {
   const [userId, setUserId] = useState("");
   const [selectedImages, setSelectedImages] = useState<PreviewImage[]>([]);
 
-  const [form, setForm] = useState({
-    brand: "",
-    model: "",
-    year: "",
-    price: "",
-    mileage: "",
-    region: "",
-    commune: "",
-    fuel_type: "",
-    transmission: "",
-    color: "",
-    description: "",
-  });
+const [form, setForm] = useState({
+  brand: "",
+  model: "",
+  year: "",
+  price: "",
+  mileage: "",
+  region: "",
+  commune: "",
+  fuel_type: "",
+  transmission: "",
+  color: "",
+  description: "",
+  allow_whatsapp: true,
+  show_phone: true,
+});
+<div className="mt-5 rounded-xl border bg-slate-50 p-4">
+  <h2 className="font-bold">Opciones de contacto</h2>
+
+  <p className="mt-1 text-sm text-slate-600">
+    Elige cómo quieres que los compradores puedan contactarte.
+  </p>
+
+  <label className="mt-4 flex items-start gap-3 text-sm">
+    <input
+      type="checkbox"
+      checked={form.allow_whatsapp}
+      onChange={(e) =>
+        setForm({ ...form, allow_whatsapp: e.target.checked })
+      }
+      className="mt-1"
+    />
+
+    <span>
+      <strong>Permitir contacto por WhatsApp</strong>
+      <br />
+      Se mostrará un botón para que te contacten directamente por WhatsApp.
+    </span>
+  </label>
+
+  <label className="mt-4 flex items-start gap-3 text-sm">
+    <input
+      type="checkbox"
+      checked={form.show_phone}
+      onChange={(e) =>
+        setForm({ ...form, show_phone: e.target.checked })
+      }
+      className="mt-1"
+    />
+
+    <span>
+      <strong>Mostrar mi número en la publicación</strong>
+      <br />
+      Tu número aparecerá visible en los datos del vendedor.
+    </span>
+  </label>
+</div>
 
   useEffect(() => {
     const checkSession = async () => {
@@ -282,10 +325,10 @@ export default function PublicarPage() {
         return;
       }
 
-      const sellerName =
-        profile.user_type === "automotora"
-          ? profile.business_name
-          : `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
+    const sellerName =
+  profile.user_type === "automotora"
+    ? profile.business_name
+    : profile.first_name || "Vendedor";
 
       const { data: car, error: carError } = await supabase
         .from("cars")
@@ -304,7 +347,10 @@ export default function PublicarPage() {
           description: form.description.trim() || null,
           seller_name: sellerName || null,
           seller_phone: profile.phone,
+          allow_whatsapp: form.allow_whatsapp,
+show_phone: form.show_phone,
           status: "pending",
+          
         })
         .select()
         .single();
@@ -451,6 +497,48 @@ export default function PublicarPage() {
           rows={5}
           className="mt-4 w-full rounded-lg border px-3 py-2"
         />
+
+<div className="mt-6 rounded-xl border bg-slate-50 p-4">
+  <h2 className="font-bold">Opciones de contacto</h2>
+
+  <p className="mt-1 text-sm text-slate-600">
+    Elige cómo quieres que los compradores puedan contactarte en esta publicación.
+  </p>
+
+  <label className="mt-4 flex items-start gap-3 text-sm">
+    <input
+      type="checkbox"
+      checked={form.allow_whatsapp}
+      onChange={(e) =>
+        setForm({ ...form, allow_whatsapp: e.target.checked })
+      }
+      className="mt-1"
+    />
+
+    <span>
+      <strong>Permitir contacto por WhatsApp</strong>
+      <br />
+      Se mostrará un botón para que te contacten directamente por WhatsApp.
+    </span>
+  </label>
+
+  <label className="mt-4 flex items-start gap-3 text-sm">
+    <input
+      type="checkbox"
+      checked={form.show_phone}
+      onChange={(e) =>
+        setForm({ ...form, show_phone: e.target.checked })
+      }
+      className="mt-1"
+    />
+
+    <span>
+      <strong>Mostrar mi número en la publicación</strong>
+      <br />
+      Tu número aparecerá visible en los datos del vendedor.
+    </span>
+  </label>
+</div>
 
         <div className="mt-6 rounded-xl border bg-slate-50 p-4">
           <h2 className="font-bold">Fotos del vehículo</h2>

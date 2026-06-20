@@ -27,6 +27,8 @@ type Car = {
   description: string | null;
   seller_name: string | null;
   seller_phone: string | null;
+  allow_whatsapp: boolean | null;
+show_phone: boolean | null;
   status: string;
   car_images: CarImage[] | null;
 };
@@ -255,25 +257,27 @@ export default function CarDetailPage() {
               </p>
 
               <p>
-                <strong>Teléfono:</strong>{" "}
-                {car.seller_phone || "No informado"}
-              </p>
+  <strong>Teléfono:</strong>{" "}
+  {car.show_phone === false
+    ? "El vendedor decidió no publicar su número"
+    : car.seller_phone || "No informado"}
+</p>
             </div>
 
-            {cleanPhone ? (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 block rounded-lg bg-green-600 px-6 py-3 text-center font-semibold text-white hover:bg-green-700"
-              >
-                Contactar por WhatsApp
-              </a>
-            ) : (
-              <div className="mt-6 rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-                El vendedor no tiene WhatsApp informado.
-              </div>
-            )}
+            {car.allow_whatsapp !== false && cleanPhone ? (
+  <a
+    href={whatsappUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="mt-6 block rounded-lg bg-green-600 px-6 py-3 text-center font-semibold text-white hover:bg-green-700"
+  >
+    Contactar por WhatsApp
+  </a>
+) : (
+  <div className="mt-6 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
+    El vendedor decidió no recibir contactos por WhatsApp en esta publicación.
+  </div>
+)}
 
             <StartChatButton
               carId={car.id}
